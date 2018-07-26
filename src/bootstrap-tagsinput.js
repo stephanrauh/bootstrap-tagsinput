@@ -27,8 +27,7 @@
       $tag.hide().fadeIn();
     },
     trimValue: false,
-    allowDuplicates: false,
-    triggerChange: true
+    allowDuplicates: false
   };
 
   /**
@@ -114,7 +113,7 @@
             this.add(items[i], true);
           }
 
-          if (!dontPushVal) self.pushVal(self.options.triggerChange);
+          if (!dontPushVal) self.pushVal();
           return;
         }
       }
@@ -177,11 +176,13 @@
         self.$element.append($option);
       }
 
-      if (!dontPushVal) self.pushVal(self.options.triggerChange);
+      if (!dontPushVal) self.pushVal();
 
       // Add class when reached maxTags
-      if (self.options.maxTags === self.itemsArray.length || self.items().toString().length === self.options.maxInputLength)
+      if (self.options.maxTags === self.itemsArray.length || self.items().toString().length === self.options.maxInputLength) {
         self.$container.addClass('bootstrap-tagsinput-max');
+        self.$element.trigger($.Event('maxItemsReached', { item: item, options: options }));
+      }
 
       // If using typeahead, once the tag has been added, clear the typeahead value so it does not stick around in the input.
       if ($('.typeahead, .twitter-typeahead', self.$container).length) {
@@ -233,7 +234,7 @@
         if ($.inArray(item, self.itemsArray) !== -1) self.itemsArray.splice($.inArray(item, self.itemsArray), 1);
       }
 
-      if (!dontPushVal) self.pushVal(self.options.triggerChange);
+      if (!dontPushVal) self.pushVal();
 
       // Remove class when reached maxTags
       if (self.options.maxTags > self.itemsArray.length) self.$container.removeClass('bootstrap-tagsinput-max');
@@ -252,7 +253,7 @@
 
       while (self.itemsArray.length > 0) self.itemsArray.pop();
 
-      self.pushVal(self.options.triggerChange);
+      self.pushVal();
     },
 
     /**
@@ -301,9 +302,7 @@
           return self.options.itemValue(item).toString();
         });
 
-      self.$element.val(val, true);
-
-      if (self.options.triggerChange) self.$element.trigger('change');
+      self.$element.val(val, true).trigger('change');
     },
 
     /**
@@ -375,31 +374,23 @@
 
       // typeahead.js
       if (self.options.typeaheadjs) {
+        var typeaheadConfig = null;
+        var typeaheadDatasets = {};
+
         // Determine if main configurations were passed or simply a dataset
         var typeaheadjs = self.options.typeaheadjs;
-        if (!$.isArray(typeaheadjs)) {
-          typeaheadjs = [null, typeaheadjs];
+        if ($.isArray(typeaheadjs)) {
+          typeaheadConfig = typeaheadjs[0];
+          typeaheadDatasets = typeaheadjs[1];
+        } else {
+          typeaheadDatasets = typeaheadjs;
         }
 
-        $.fn.typeahead.apply(self.$input, typeaheadjs).on(
+        self.$input.typeahead(typeaheadConfig, typeaheadDatasets).on(
           'typeahead:selected',
-          $.proxy(function(obj, datum, name) {
-            var index = 0;
-            typeaheadjs.some(function(dataset, _index) {
-              if (dataset.name === name) {
-                index = _index;
-                return true;
-              }
-              return false;
-            });
-
-            // @TODO Dep: https://github.com/corejavascript/typeahead.js/issues/89
-            if (typeaheadjs[index].valueKey) {
-              self.add(datum[typeaheadjs[index].valueKey]);
-            } else {
-              self.add(datum);
-            }
-
+          $.proxy(function(obj, datum) {
+            if (typeaheadDatasets.valueKey) self.add(datum[typeaheadDatasets.valueKey]);
+            else self.add(datum);
             self.$input.typeahead('val', '');
           }, self)
         );
