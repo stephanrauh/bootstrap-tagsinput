@@ -29,6 +29,16 @@
     trimValue: false,
     allowDuplicates: false
   };
+  
+  /**
+   * polyfill for the `String.prototype.startsWith` method in ECMAScript 6
+   */
+  if (!String.prototype.startsWith) {
+    String.prototype.startsWith = function(searchString, position) {
+      position = position || 0;
+      return this.indexOf(searchString, position) === position;
+    };
+  }
 
   /**
    * Constructor function
